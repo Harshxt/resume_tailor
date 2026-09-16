@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: resumeTailor
+  config:
+    import: optional:file:.env.local[.properties]
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+  datasource:
+    url: jdbc:h2:mem:tailor_db
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+app:
+  ffmpeg:
+    path: ffmpeg
+
+
