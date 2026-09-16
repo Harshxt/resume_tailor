@@ -13,9 +13,21 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          model: gemini-3.1-flash-lite
+    # openai:
+    #   api-key: ${OPENAI_API_KEY}
+    #   chat:
+    #     model: 
+    
 
 app:
   ffmpeg:
     path: ffmpeg
+
 
 

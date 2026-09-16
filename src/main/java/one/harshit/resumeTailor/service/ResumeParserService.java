@@ -4,14 +4,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import one.harshit.resumeTailor.model.ResumeDocument;
@@ -45,9 +43,11 @@ public class ResumeParserService {
                 ResumeDataDto data=  parsePdfFormat(fileInfo);
                 String text = data.toString();
                 log.info("Received text {}", text);
+                return;
 
             case "docx":
-                parseDocxFormat(fileInfo);
+                parsePdfFormat(fileInfo);
+
             default:
                 log.warn("contentType could not be extracted for file: {}", filePath.getFileName());
                 return;
@@ -65,8 +65,8 @@ public class ResumeParserService {
     private ResumeDataDto parsePdfFormat(ResumeDocument fileInfo) {
 
         Path filePath = fileInfo.getFilePath();
-        TikaDocumentReader reader = new TikaDocumentReader(new FileSystemResource(filePath));
-
+        TikaDocumentReader  reader = new TikaDocumentReader(new FileSystemResource(filePath));
+        
         List<Document> documents = reader.get();
         String resumeText = documents.stream().map(Document::getText).collect(Collectors.joining("\n"));
 
