@@ -1,8 +1,11 @@
 package one.harshit.resumeTailor.controller;
 
+import one.harshit.resumeTailor.service.LlmService;
 import one.harshit.resumeTailor.service.StorageService;
 
 import org.apache.poi.ss.formula.functions.T;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,21 +15,27 @@ import tools.jackson.databind.node.ObjectNode;
 
 import one.harshit.resumeTailor.controller.dto.GenericResponse;
 import one.harshit.resumeTailor.model.ResumeDocument;
+import one.harshit.resumeTailor.model.dto.ResumeDataDto;
 import one.harshit.resumeTailor.service.ResumeParserService;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.GetMapping;
+
 
 @RestController
 @RequestMapping("/api/resume")
 public class Controller {
 
+    private final LlmService llmService;
     private final StorageService storageService;
     private final ResumeParserService resumeParserService;
     final ObjectMapper objectMapper;
+    private final Logger log = LoggerFactory.getLogger(Controller.class);
 
-    Controller(ResumeParserService resumeParserService, ObjectMapper objectMapper, StorageService storageService) {
+    Controller(ResumeParserService resumeParserService, ObjectMapper objectMapper, StorageService storageService, LlmService llmService) {
         this.resumeParserService = resumeParserService;
         this.objectMapper = objectMapper;
         this.storageService = storageService;
+        this.llmService = llmService;
     }
 
     // Request DTO for structured JSON data (can be placed in a separate file)
@@ -41,6 +50,8 @@ public class Controller {
     public ResponseEntity<?> uploadResume(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "data", required = false) TailorRequest data) {
+                log.debug("TARGET DESCRIPTION: {}" , data.jobDescription());
+                log.debug("TARGET ROLE: {}" , data.targetRole());
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new GenericResponse<T>(false, "Uploaded file is empty"));
         }
@@ -50,7 +61,12 @@ public class Controller {
 
         ResumeDocument document = storageService.store(file);
 
-        resumeParserService.parseFile(document);
+        ResumeDataDto resumeData = resumeParserService.parseFile(document);
+
+
+        //calling the llm service to request for suggestion
+        llmService.suggestChanges(resumeData, data.jobDescription(), data.targetRole());
+        
 
         
 
@@ -64,4 +80,13 @@ public class Controller {
         return ResponseEntity.ok(new GenericResponse<>(true, "Received file: "+ filename, json));
 
     }
+
+
+    @GetMapping("/health")
+    public String healthCheckString() {
+        log.debug("all good");
+        return "All good";
+    }
+    
+
 }

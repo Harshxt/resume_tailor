@@ -39,3 +39,4 @@ files/
 .env.*
 .env
 
+src/main/java/one/harshit/.DS_Store

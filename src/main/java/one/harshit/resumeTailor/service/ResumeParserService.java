@@ -28,7 +28,7 @@ public class ResumeParserService {
         this.chatClient = chatClientBuilder.build();
     }
 
-    public void parseFile(ResumeDocument fileInfo) {
+    public ResumeDataDto parseFile(ResumeDocument fileInfo) {
         Path filePath = fileInfo.getFilePath();
         String contentType = null;
         try {
@@ -41,26 +41,27 @@ public class ResumeParserService {
         switch (contentType) {
             case "pdf":
                 ResumeDataDto data=  parsePdfFormat(fileInfo);
-                String text = data.toString();
-                log.info("Received text {}", text);
-                return;
+                // String text = data.toString();
+                // log.debug("Received text {}", text);
+                return data;
 
             case "docx":
-                parsePdfFormat(fileInfo);
+                return parsePdfFormat(fileInfo);
+                
 
             default:
                 log.warn("contentType could not be extracted for file: {}", filePath.getFileName());
-                return;
+                return null;
 
         }
 
     }
 
-    private ResumeDataDto parseDocxFormat(ResumeDocument fileInfo) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'parseDocxFormat'");
+    // private ResumeDataDto parseDocxFormat(ResumeDocument fileInfo) {
+    //     // TODO Auto-generated method stub
+    //     throw new UnsupportedOperationException("Unimplemented method 'parseDocxFormat'");
 
-    }
+    // }
 
     private ResumeDataDto parsePdfFormat(ResumeDocument fileInfo) {
 
@@ -68,7 +69,8 @@ public class ResumeParserService {
         TikaDocumentReader  reader = new TikaDocumentReader(new FileSystemResource(filePath));
         
         List<Document> documents = reader.get();
-        String resumeText = documents.stream().map(Document::getText).collect(Collectors.joining("\n"));
+
+        String resumeText = documents.stream().map(doc -> doc.getText()).collect(Collectors.joining("\n"));
 
         return chatClient.prompt().system(
                 "You are an expert resume parser. Extract structured details from the resume text accurately into the requested JSON schema.")

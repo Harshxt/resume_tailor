@@ -24,6 +24,9 @@ spring:
     #   chat:
     #     model: 
     
+logging:
+  level:
+    '[one.harshit.resumeTailor]': ${LOGGING_LEVEL_ONE_HARSHIT_RESUMETAILOR:info}
 
 app:
   ffmpeg:
