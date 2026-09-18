@@ -40,3 +40,4 @@ files/
 .env
 
 src/main/java/one/harshit/.DS_Store
+frontend/

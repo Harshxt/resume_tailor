@@ -18,8 +18,6 @@ import one.harshit.resumeTailor.model.ResumeDocument;
 import one.harshit.resumeTailor.model.dto.ResumeDataDto;
 import one.harshit.resumeTailor.service.ResumeParserService;
 import tools.jackson.databind.ObjectMapper;
-import org.springframework.web.bind.annotation.GetMapping;
-
 
 @RestController
 @RequestMapping("/api/resume")
@@ -31,7 +29,8 @@ public class Controller {
     final ObjectMapper objectMapper;
     private final Logger log = LoggerFactory.getLogger(Controller.class);
 
-    Controller(ResumeParserService resumeParserService, ObjectMapper objectMapper, StorageService storageService, LlmService llmService) {
+    Controller(ResumeParserService resumeParserService, ObjectMapper objectMapper, StorageService storageService,
+            LlmService llmService) {
         this.resumeParserService = resumeParserService;
         this.objectMapper = objectMapper;
         this.storageService = storageService;
@@ -50,12 +49,11 @@ public class Controller {
     public ResponseEntity<?> uploadResume(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "data", required = false) TailorRequest data) {
-                log.debug("TARGET DESCRIPTION: {}" , data.jobDescription());
-                log.debug("TARGET ROLE: {}" , data.targetRole());
+        log.debug("TARGET DESCRIPTION: {}", data.jobDescription());
+        log.debug("TARGET ROLE: {}", data.targetRole());
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new GenericResponse<T>(false, "Uploaded file is empty"));
         }
-
 
         String filename = file.getOriginalFilename();
 
@@ -63,30 +61,27 @@ public class Controller {
 
         ResumeDataDto resumeData = resumeParserService.parseFile(document);
 
+        boolean isResume = llmService.isResume(resumeData);
 
-        //calling the llm service to request for suggestion
-        llmService.suggestChanges(resumeData, data.jobDescription(), data.targetRole());
-        
+        if (!isResume) {
+            return ResponseEntity.badRequest()
+                    .body(new GenericResponse<>(false, "The document provided is not a resume"));
+        }
 
-        
-
+        // calling the llm service to request for suggestion
+        String suggestion = llmService.suggestChanges(resumeData, data.jobDescription(), data.targetRole());
 
         ObjectNode json = objectMapper.createObjectNode();
-        json.put("jobDescription", data.jobDescription);
-        json.put("targetRole", data.targetRole);
+        json.put("suggestions", suggestion);
 
-        
-
-        return ResponseEntity.ok(new GenericResponse<>(true, "Received file: "+ filename, json));
+        return ResponseEntity.ok(new GenericResponse<>(true, "Received file: " + filename, json));
 
     }
-
 
     @GetMapping("/health")
     public String healthCheckString() {
         log.debug("all good");
         return "All good";
     }
-    
 
 }

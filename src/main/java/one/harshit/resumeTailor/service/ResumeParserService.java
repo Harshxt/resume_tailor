@@ -57,11 +57,7 @@ public class ResumeParserService {
 
     }
 
-    // private ResumeDataDto parseDocxFormat(ResumeDocument fileInfo) {
-    //     // TODO Auto-generated method stub
-    //     throw new UnsupportedOperationException("Unimplemented method 'parseDocxFormat'");
-
-    // }
+    
 
     private ResumeDataDto parsePdfFormat(ResumeDocument fileInfo) {
 

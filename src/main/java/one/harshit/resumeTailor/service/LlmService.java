@@ -54,4 +54,73 @@ public class LlmService {
         return json;
     }
 
+    public boolean isResume(ResumeDataDto resumeData) {
+        if (resumeData == null) {
+            return false;
+        }
+
+        try {
+            String resumeJson = serializeDto(resumeData);
+            final String SYSTEM_PROMPT_VERIFIER = """
+                    You are an expert document classifier.
+                    Determine whether the provided structured data represents a genuine, valid resume or CV.
+                    Respond with only 'true' if it is a resume/CV, or 'false' if it is not.
+                    Do not include any other markdown, explanation, or additional text.
+                    """;
+
+            String response = chatClient.prompt()
+                    .system(SYSTEM_PROMPT_VERIFIER)
+                    .user(u -> u.text("Analyze the following structured data and determine if it represents a resume:\n```json\n{resumeJson}\n```")
+                            .param("resumeJson", resumeJson))
+                    .call()
+                    .content();
+
+            log.debug("Response from isResume(ResumeDataDto) : {}", response);
+            if (response == null) {
+                return false;
+            }
+            String cleaned = response.trim().toLowerCase();
+            return cleaned.contains("true") && !cleaned.contains("false");
+        } catch (JsonProcessingException e) {
+            log.error("Could not serialize ResumeDataDto: {}", e.getMessage(), e);
+            return false;
+        } catch (Exception e) {
+            log.error("Failed to verify if ResumeDataDto is a resume: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    public boolean isResume(String documentText) {
+        if (documentText == null || documentText.isBlank()) {
+            return false;
+        }
+
+        final String SYSTEM_PROMPT_VERIFIER = """
+                You are an expert document classifier.
+                Determine whether the provided text content belongs to a resume or CV.
+                Respond with only 'true' if it is a resume/CV, or 'false' if it is not.
+                Do not include any other markdown, explanation, or additional text.
+                """;
+
+        try {
+            String response = chatClient.prompt()
+                    .system(SYSTEM_PROMPT_VERIFIER)
+                    .user(u -> u.text("Analyze the following document content and determine if it is a resume:\n\n{text}")
+                            .param("text", documentText))
+                    .call()
+                    .content();
+
+            log.debug("Response from isResume : {}", response);
+            if (response == null) {
+                return false;
+            }
+            String cleaned = response.trim().toLowerCase();
+            return cleaned.contains("true") && !cleaned.contains("false");
+        } catch (Exception e) {
+            log.error("Failed to verify if document is a resume: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
 }
+
