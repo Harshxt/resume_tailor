@@ -62,14 +62,14 @@ public class Controller {
         ResumeDataDto resumeData = resumeParserService.parseFile(document);
 
         boolean isResume = llmService.isResume(resumeData);
-
+        
         if (!isResume) {
             return ResponseEntity.badRequest()
                     .body(new GenericResponse<>(false, "The document provided is not a resume"));
         }
-
+        String santisedJobDescription = llmService.debloatJobDescription(data.jobDescription());
         // calling the llm service to request for suggestion
-        String suggestion = llmService.suggestChanges(resumeData, data.jobDescription(), data.targetRole());
+        String suggestion = llmService.suggestChanges(resumeData, santisedJobDescription, data.targetRole());
 
         ObjectNode json = objectMapper.createObjectNode();
         json.put("suggestions", suggestion);
@@ -83,5 +83,7 @@ public class Controller {
         log.debug("all good");
         return "All good";
     }
+
+
 
 }

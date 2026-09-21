@@ -70,7 +70,8 @@ public class LlmService {
 
             String response = chatClient.prompt()
                     .system(SYSTEM_PROMPT_VERIFIER)
-                    .user(u -> u.text("Analyze the following structured data and determine if it represents a resume:\n```json\n{resumeJson}\n```")
+                    .user(u -> u.text(
+                            "Analyze the following structured data and determine if it represents a resume:\n```json\n{resumeJson}\n```")
                             .param("resumeJson", resumeJson))
                     .call()
                     .content();
@@ -105,7 +106,8 @@ public class LlmService {
         try {
             String response = chatClient.prompt()
                     .system(SYSTEM_PROMPT_VERIFIER)
-                    .user(u -> u.text("Analyze the following document content and determine if it is a resume:\n\n{text}")
+                    .user(u -> u
+                            .text("Analyze the following document content and determine if it is a resume:\n\n{text}")
                             .param("text", documentText))
                     .call()
                     .content();
@@ -122,5 +124,33 @@ public class LlmService {
         }
     }
 
-}
+    public String debloatJobDescription(String jobDescription) {
+        final String SYSTEM_PROMPT = """
+                You are an expert technical recruiter and resume-tailoring assistant.
+                Your task is to debloat the provided job description to retain only resume-relevant details.
+                CRITICAL RULES:
+                1. First, check if the input is a genuine job description or posting.
+                   - If it is NOT a job description, return an EMPTY STRING (""). Absolutely no commentary, greetings, or explanations.
+                2. If it IS a job description:
+                   - Summarize company details (industry, domain, core product) into 2-3 concise sentences.
+                   - Retain role title, core responsibilities, qualifications, required/preferred technical skills, and tools.
+                   - STRIP OUT all salary/pay/compensation, perks/benefits, EEO/legal disclaimers, visa sponsorship notes, and application/recruiter instructions.
+                   - Return strictly the structured markdown output with NO intro/outro conversational text.
+                """;
 
+        try {
+            String response = chatClient.prompt()
+                    .system(SYSTEM_PROMPT)
+                    .user(u -> u.text("Input Text: \n \n {text}").param("text", jobDescription))
+                    .call().content();
+
+            return response != null ? response.trim() : "";
+
+        } catch (Exception e) {
+            log.error("Failed to debloat job description: {}", e.getMessage(), e);
+            return "";
+        }
+
+    }
+
+}
