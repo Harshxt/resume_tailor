@@ -2,11 +2,7 @@ package one.harshit.resumeTailor.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ansi.AnsiColor;
-import org.springframework.boot.ansi.AnsiOutput;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import picocli.CommandLine.Help.Ansi;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
