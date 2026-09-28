@@ -29,8 +29,14 @@ logging:
     '[one.harshit.resumeTailor]': ${LOGGING_LEVEL_ONE_HARSHIT_RESUMETAILOR:info}
 
 app:
-  ffmpeg:
-    path: ffmpeg
+  ai:
+    fast:
+      provider: googleGenAiChatModel
+      model: gemini-3.1-flash-lite
+    reasoning:
+      provider: googleGenAiChatModel
+      model: gemini-3.1-flash-lite
+    
 
 
 
