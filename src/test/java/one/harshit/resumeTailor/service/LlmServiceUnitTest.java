@@ -25,10 +25,10 @@ import static org.mockito.Mockito.*;
 class LlmServiceUnitTest {
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private ChatClient.Builder chatClientBuilder;
+    private ChatClient fastChatClient;
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private ChatClient chatClient;
+    private ChatClient reasoningChatClient;
 
     private ObjectMapper objectMapper;
     private LlmService llmService;
@@ -36,8 +36,7 @@ class LlmServiceUnitTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        when(chatClientBuilder.build()).thenReturn(chatClient);
-        llmService = new LlmService(chatClientBuilder, objectMapper);
+        llmService = new LlmService(fastChatClient, reasoningChatClient, objectMapper);
     }
 
     private ResumeDataDto createSampleResumeData() {
@@ -58,7 +57,7 @@ class LlmServiceUnitTest {
     void isResume_ResumeDataDto_ValidResume_ReturnsTrue() {
         // Given
         ResumeDataDto sampleResume = createSampleResumeData();
-        when(chatClient.prompt()
+        when(fastChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -81,7 +80,7 @@ class LlmServiceUnitTest {
         assertThat(nullResult).isFalse();
 
         // Case B: LLM responds "false"
-        when(chatClient.prompt()
+        when(fastChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -92,7 +91,7 @@ class LlmServiceUnitTest {
         assertThat(falseResult).isFalse();
 
         // Case C: LLM response is null
-        when(chatClient.prompt()
+        when(fastChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -108,7 +107,7 @@ class LlmServiceUnitTest {
     @SuppressWarnings("unchecked")
     void isResume_ResumeDataDto_HandlesExceptionsGracefully() throws JsonProcessingException {
         // Case A: LLM call throws runtime exception
-        when(chatClient.prompt()
+        when(fastChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -126,7 +125,7 @@ class LlmServiceUnitTest {
             throw mock(JsonProcessingException.class);
         }).when(failingWriter).writeValueAsString(any());
 
-        LlmService serviceWithFailingMapper = new LlmService(chatClientBuilder, failingMapper);
+        LlmService serviceWithFailingMapper = new LlmService(fastChatClient, reasoningChatClient, failingMapper);
         boolean serializationFailResult = serviceWithFailingMapper.isResume(createSampleResumeData());
         assertThat(serializationFailResult).isFalse();
     }
@@ -140,7 +139,7 @@ class LlmServiceUnitTest {
         assertThat(llmService.isResume("   ")).isFalse();
 
         // Valid resume text where LLM answers true
-        when(chatClient.prompt()
+        when(fastChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -150,7 +149,7 @@ class LlmServiceUnitTest {
         assertThat(llmService.isResume("John Doe - Work Experience - Java Developer")).isTrue();
 
         // LLM returns false
-        when(chatClient.prompt()
+        when(fastChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -170,7 +169,7 @@ class LlmServiceUnitTest {
         String role = "Senior Backend Engineer";
         String expectedSuggestion = "- Add quantitative metrics to projects\n- Highlight Spring Boot experience";
 
-        when(chatClient.prompt()
+        when(reasoningChatClient.prompt()
                 .system(anyString())
                 .user(any(Consumer.class))
                 .call()
@@ -195,7 +194,7 @@ class LlmServiceUnitTest {
             throw mock(JsonProcessingException.class);
         }).when(failingWriter).writeValueAsString(any());
 
-        LlmService serviceWithFailingMapper = new LlmService(chatClientBuilder, failingMapper);
+        LlmService serviceWithFailingMapper = new LlmService(fastChatClient, reasoningChatClient, failingMapper);
 
         // When
         String result = serviceWithFailingMapper.suggestChanges(

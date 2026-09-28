@@ -6,6 +6,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,12 +18,19 @@ import one.harshit.resumeTailor.model.dto.ResumeMatchResultDto;
 
 @Service
 public class LlmService {
+    private final ChatClient fastChatClient;
+    private final ChatClient reasoningChatClient;
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
     private static Logger log = LoggerFactory.getLogger(LlmService.class);
 
-    LlmService(ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper) {
-        this.chatClient = chatClientBuilder.build();
+    public LlmService(
+            @Qualifier("fastChatClient") ChatClient fastChatClient,
+            @Qualifier("reasoningChatClient") ChatClient reasoningChatClient,
+            ObjectMapper objectMapper) {
+        this.fastChatClient = fastChatClient;
+        this.reasoningChatClient = reasoningChatClient;
+        this.chatClient = reasoningChatClient; // Default/generic client
         this.objectMapper = objectMapper;
     }
 
@@ -33,7 +42,7 @@ public class LlmService {
             params.put("resumeJson", resumeJson);
             params.put("targetJd", targetJd);
             params.put("targetRole", targetRole);
-            String response = chatClient.prompt()
+            String response = reasoningChatClient.prompt()
                     .system(SYSTEM_PROMPT_WRITER)
                     .user(u -> u.text(
                             "Here is the candidate's structured resume data:\n```json\n{resumeJson}\n```\n\n for the following Job Description:\n```json\n{targetJd}\n```\n\n and the target role:\n```json\n{targetRole}\n```\n\n Please suggest impactful changes and improvements.")
@@ -69,7 +78,7 @@ public class LlmService {
                     Do not include any other markdown, explanation, or additional text.
                     """;
 
-            String response = chatClient.prompt()
+            String response = fastChatClient.prompt()
                     .system(SYSTEM_PROMPT_VERIFIER)
                     .user(u -> u.text(
                             "Analyze the following structured data and determine if it represents a resume:\n```json\n{resumeJson}\n```")
@@ -105,7 +114,7 @@ public class LlmService {
                 """;
 
         try {
-            String response = chatClient.prompt()
+            String response = fastChatClient.prompt()
                     .system(SYSTEM_PROMPT_VERIFIER)
                     .user(u -> u
                             .text("Analyze the following document content and determine if it is a resume:\n\n{text}")
@@ -140,7 +149,7 @@ public class LlmService {
                 """;
 
         try {
-            String response = chatClient.prompt()
+            String response = fastChatClient.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(u -> u.text("Input Text: \n \n {text}").param("text", jobDescription))
                     .call().content();
@@ -208,7 +217,7 @@ public class LlmService {
             params.put("resumeJson", resumeJson);
             params.put("targetJd", debloatedJd);
             params.put("targetRole", (targetRole != null && !targetRole.isBlank()) ? targetRole : "Not Specified");
-            ResumeMatchResultDto response = chatClient.prompt()
+            ResumeMatchResultDto response = reasoningChatClient.prompt()
                     .system(SYSTEM_PROMPT_MATCHER)
                     .user(u -> u.text("""
                                  Evaluate this candidate for the given Job Description and Target Role:

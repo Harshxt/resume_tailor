@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 public class LlmConfig {
 
     @Bean 
-    public ChatClient classificationChatClient(Map<String, ChatModel> chatModels,
+    public ChatClient fastChatClient(Map<String, ChatModel> chatModels,
             @Value("${app.ai.fast.provider:googleGenAiChatModel}") String providerBeanName,
             @Value("${app.ai.fast.model}") String modelName) {
 
