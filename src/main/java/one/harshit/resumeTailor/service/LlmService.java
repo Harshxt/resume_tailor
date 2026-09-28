@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import tools.jackson.databind.ObjectMapper;
 
 import one.harshit.resumeTailor.model.dto.ResumeDataDto;
+import one.harshit.resumeTailor.model.dto.ResumeMatchResultDto;
 
 @Service
 public class LlmService {
@@ -149,6 +150,88 @@ public class LlmService {
         } catch (Exception e) {
             log.error("Failed to debloat job description: {}", e.getMessage(), e);
             return "";
+        }
+
+    }
+
+    public ResumeMatchResultDto calculateMatchScore(ResumeDataDto resumeData, String debloatedJd, String targetRole) {
+        if (resumeData == null || debloatedJd == null || debloatedJd.isBlank()) {
+            log.warn("Cannot calculate match score: missing resumeData or jobDescription");
+            return null;
+        }
+
+        final String SYSTEM_PROMPT_MATCHER = """
+                        You are an elite technical hiring auditor and compensation/calibration committee lead.
+                Your task is to evaluate a candidate's structured resume against a Job Description and Target Role.
+                You must compute two distinct scores (0 to 100) using strict mathematical, asymmetric rules.
+                ========================================================================
+                RULESET 1: JOB DESCRIPTION MATCH SCORE (Base: 100, Range: 0 to 100)
+                ========================================================================
+                1. Extract all explicit requirements from the Job Description and classify each into:
+                   - MUST_HAVE: Non-negotiable dealbreakers (e.g. required degree, core language, minimum years, required license/clearance).
+                   - CORE: Primary technical responsibilities, key tools, architecture, and daily tasks.
+                   - NICE_TO_HAVE: Bonus qualifications, preferred frameworks, nice-to-have domain familiarity.
+                2. Check the candidate's resume for verifiable evidence for EACH criterion. Apply point impacts:
+                   - MUST_HAVE criteria:
+                     * SATISFIED: pointImpact = 0
+                     * PARTIALLY_SATISFIED: pointImpact = -15
+                     * MISSING: pointImpact = -35  <-- ASYMMETRIC KNOCKOUT PENALTY
+                   - CORE criteria:
+                     * SATISFIED: pointImpact = 0
+                     * PARTIALLY_SATISFIED: pointImpact = -7
+                     * MISSING: pointImpact = -15
+                   - NICE_TO_HAVE criteria:
+                     * SATISFIED: pointImpact = +5 (bonus, up to a maximum total of +15 bonus points)
+                     * MISSING: pointImpact = 0 (STRICTLY NO PENALTY)
+                3. Calculate JD Match Score:
+                   - totalPenalties = sum of all negative pointImpact values.
+                   - totalBonuses = sum of all positive pointImpact values (capped at +15).
+                   - jdMatchScore = Math.max(0, Math.min(100, 100 + totalPenalties + totalBonuses)).
+                ========================================================================
+                RULESET 2: TARGET ROLE SCORE (Range: 0 to 100)
+                ========================================================================
+                Evaluate how well the candidate embodies the generic title '{targetRole}', independent of this specific company's JD:
+                1. seniorityFitScore (0 to 40): Does the candidate's scope, leadership, autonomy, and tenure match the expected seniority of this title?
+                2. archetypeFitScore (0 to 35): Does the candidate have the universal foundational knowledge expected of anyone holding this job title in the industry?
+                3. careerTrajectoryScore (0 to 25): Is their past career progression consistent and logical towards stepping into this role?
+                - targetRoleScore = seniorityFitScore + archetypeFitScore + careerTrajectoryScore (clamped 0 to 100).
+                ========================================================================
+                RULESET 3: OVERALL COMPOSITE SCORE
+                ========================================================================
+                - overallCompositeScore = Math.round((0.70 * jdMatchScore) + (0.30 * targetRoleScore)).
+                CRITICAL: Be objective. Do not award points for unproven claims. Fill all fields of the requested JSON schema accurately.
+                        """;
+
+        try {
+            String resumeJson = serializeDto(resumeData);
+            Map<String, Object> params = new HashMap<>();
+            params.put("resumeJson", resumeJson);
+            params.put("targetJd", debloatedJd);
+            params.put("targetRole", (targetRole != null && !targetRole.isBlank()) ? targetRole : "Not Specified");
+            ResumeMatchResultDto response = chatClient.prompt()
+                    .system(SYSTEM_PROMPT_MATCHER)
+                    .user(u -> u.text("""
+                                 Evaluate this candidate for the given Job Description and Target Role:
+                                Target Role: {targetRole}
+                                Job Description:
+                                ```
+                                {targetJd}
+                                ```
+                                Candidate Resume Structured Data:
+                                ```json
+                                {resumeJson}
+                                ```
+                            """).params(params))
+                    .call()
+                    .entity(ResumeMatchResultDto.class);
+
+                    return response;
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize resumeData for scoring: {}", e.getMessage(), e);
+            return null;
+        } catch (Exception e) {
+            log.error("Failed to evaluate resume match score: {}", e.getMessage(), e);
+            return null;
         }
 
     }
