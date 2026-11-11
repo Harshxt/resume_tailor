@@ -39,5 +39,6 @@ files/
 .env.*
 .env
 
-src/main/java/one/harshit/.DS_Store
+.DS_Store
+# Frontend repos (web, extension) are tracked separately
 frontend/

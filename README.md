@@ -95,6 +95,9 @@ resumeTailor/
 ├── .env.local                          # Local environment variables (API keys)
 ├── pom.xml                             # Maven configuration & Spring dependencies
 ├── files/                              # Directory for stored uploaded resumes
+├── frontend/                           # Ignored here; each subfolder is its own git repo
+│   ├── web/                            # React web app
+│   └── extension/                      # Browser extension
 └── src/
     ├── main/
     │   ├── java/one/harshit/resumeTailor/
@@ -103,9 +106,9 @@ resumeTailor/
     │   │   ├── model/                  # Data entities, DTOs, and type converters
     │   │   ├── repository/             # Data access interfaces
     │   │   ├── service/                # Parser, Storage, and Spring AI LLM services
-    │       ├── application.yaml        # Spring Boot application configuration
     │   │   └── ResumeTailorApplication.java # Spring Boot main entrypoint
     │   └── resources/
+    │       ├── application.yaml        # Spring Boot application configuration
     │       └── static/ & templates/
     └── test/                           # Unit & integration tests
 
@@ -153,7 +156,7 @@ Make sure you have the following installed on your machine:
 
 1. **Navigate to the frontend directory**:
    ```bash
-   cd frontend/resumeTailor_frontend
+   cd frontend/web
    ```
 
 2. **Install dependencies**:
